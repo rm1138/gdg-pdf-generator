@@ -1,7 +1,7 @@
 <template>
-    <div>
+    <div class="block">
         <div v-if="block.blockType === 'paragraph'">
-            <paragraph-component/>
+            <paragraph-component :typography="block.typography" :content="block.content"/>
         </div>
         <div v-if="block.blockType === 'image'">
             <image-component/>
@@ -14,7 +14,6 @@
 
 <script lang="ts">
 import { defineComponent, PropType } from 'vue'
-import { Block } from '@/Types'
 import ParagraphComponent from './Paragraph.vue'
 import ImageComponent from './Image.vue'
 import TableComponent from './Table.vue'
