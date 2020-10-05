@@ -1,5 +1,5 @@
 <template>
-
+<div>Paragraph</div>
 </template>
 
 <script>

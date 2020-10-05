@@ -1,0 +1,7 @@
+@function convert($px) {
+  @return ($px / 2480.0) * 210.0;
+}
+
+@function pxToMm($px) {
+  @return #{convert($px)}mm;
+}
