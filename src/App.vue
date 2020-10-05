@@ -1,26 +1,49 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <page v-for="(page, pageNo) in pages" :key="page" :ref="'page' + pageNo">
+    {{ page }}
+  </page>
 </template>
 
-<script>
-import HelloWorld from './components/HelloWorld.vue'
+<script lang="ts">
+import { defineComponent } from 'vue'
+import Page from '@/components/Page.vue'
+import { Data, PageData} from './Types'
 
-export default {
-  name: 'App',
-  components: {
-    HelloWorld
-  }
+const data: Data = {
+  blocks: [{
+    content: 'Test',
+    typography: 'h1',
+    blockType: 'paragraph',
+  }, {
+    content: 'Test 2',
+    typography: 'p',
+    blockType: 'paragraph'
+  }]
 }
+export default defineComponent({
+  data(): { pages: PageData[], data: Data } {
+    return {
+      pages: [],
+      data: data
+    }
+  },
+  mounted() {
+    while(this.data.blocks.length > 0) {
+      this.pages.push({
+        blocks: [this.data.blocks.shift()!!],
+        title: 'test',
+        pageNo: 1,
+        footerMsg: ''
+      })
+    }
+    setTimeout(() => {
+      console.log(this.$refs)
+    }, 1000)
+  },
+  components: { Page }
+})
 </script>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
+<style lang="sass">
+@import '~paper-css/paper.css'
 </style>
