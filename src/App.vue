@@ -15,7 +15,8 @@
         <option value="A5 landscape">A5 Landscape</option>
         <option value="letter landscape">Letter Landscape</option>
         <option value="legal landscape">Legal Landscape</option>
-      </select>
+      </select><br/>
+      <a href="https://github.com/rm1138/gdg-pdf-generator">Source Code</a>
     </div>
     <page-component
         :class="{ 'demo-mode': demoMode.value === 'yes' }"
