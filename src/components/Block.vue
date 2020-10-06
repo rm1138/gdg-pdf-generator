@@ -4,7 +4,7 @@
             <paragraph-component :typography="block.typography" :content="block.content"/>
         </div>
         <div v-if="block.blockType === 'image'">
-            <image-component/>
+            <image-component :src="block.url" :width="block.width" :height="block.height"/>
         </div>
         <div v-if="block.blockType === 'table'">
             <table-component/>
