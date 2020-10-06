@@ -24,6 +24,7 @@ declare type Paragraph = {
 
 declare type Image = {
     url: string
+    caption?: string
     width?: number
     height?: number
     blockType: 'image'

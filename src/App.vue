@@ -1,6 +1,22 @@
 <template>
   <div>
-    <input type="checkbox" v-model="demoMode.value" true-value="yes" false-value="no"/>
+    <div class="tool-bar">
+      <label for="demoMode">Demo</label>
+      <input id="demoMode" type="checkbox" v-model="demoMode.value" true-value="yes" false-value="no"/>
+      <button @click="renderPage">Render</button>
+      <select v-model="paperFormats.value">
+        <option value="A3">A3</option>
+        <option value="A4">A4</option>
+        <option value="A5">A5</option>
+        <option value="letter">Letter</option>
+        <option value="legal">Legal</option>
+        <option value="A3 landscape">A3 Landscape</option>
+        <option value="A4 landscape">A4 Landscape</option>
+        <option value="A5 landscape">A5 Landscape</option>
+        <option value="letter landscape">Letter Landscape</option>
+        <option value="legal landscape">Legal Landscape</option>
+      </select>
+    </div>
     <page-component
         :class="{ 'demo-mode': demoMode.value === 'yes' }"
         :key="page"
@@ -12,7 +28,7 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, onMounted, reactive, ref} from 'vue'
+import {defineComponent, onMounted, reactive, ref, watch} from 'vue'
 import PageComponent from '@/components/Page.vue'
 import {LoremIpsum} from "lorem-ipsum"
 
@@ -38,46 +54,61 @@ const long = new LoremIpsum({
   }
 })
 
-const rawData: Data = {
-  blocks: Array.from(Array(100).keys())
-      .map(idx => {
-        const random = Math.random()
-        if (idx === 0 || random > 0.9) {
-          return {
-            blockType: 'paragraph',
-            content: short.generateSentences(),
-            typography: 'h2',
-          }
-        } else if (random > 0.8) {
-          const width = Math.floor(Math.random() * 200) + 300
-          const height = Math.floor(Math.random() * 100) + 100
-          return {
-            blockType: 'image',
-            url: `https://picsum.photos/${width}/${height}`,
-            width,
-            height
-          }
-        } else {
-          return {
-            blockType: 'paragraph',
-            content: long.generateParagraphs(1),
-            typography: 'p',
-          }
-        }
-      })
+let lastType: 'h2' | 'image' | 'p' | null = null
+const rawData: () => Data = () => {
+  return {
+    blocks: Array.from(Array(50).keys())
+            .map(idx => {
+              const random = Math.random()
+              if (idx === 0 || (lastType !== 'h2' && random > 0.7)) {
+                lastType = 'h2'
+                return {
+                  blockType: 'paragraph',
+                  content: short.generateSentences(),
+                  typography: 'h2',
+                }
+              } else if (lastType === 'p' && random > 0.5) {
+                const width = 300 // Math.floor(Math.random() * 200) + 300
+                const height = 200 // Math.floor(Math.random() * 100) + 100
+
+                lastType = 'image'
+                return {
+                  blockType: 'image',
+                  url: `https://picsum.photos/${width}/${height}?t=${Math.random()}`,
+                  caption: short.generateSentences(1),
+                  width,
+                  height
+                }
+              } else {
+                lastType = 'p'
+                return {
+                  blockType: 'paragraph',
+                  content: long.generateParagraphs(1),
+                  typography: 'p',
+                }
+              }
+            })
+  }
 }
 
-async function waitUI() {
-  // return new Promise(resolve => setTimeout(resolve, 500))
- return new Promise(resolve => requestAnimationFrame(resolve))
+async function waitUI(demoMode: 'yes' | 'no' = 'no') {
+  if (demoMode === 'yes') {
+    return new Promise(resolve => setTimeout(resolve, 500))
+  } else {
+    return new Promise(resolve => requestAnimationFrame(resolve))
+  }
 }
+
+type PaperFormats = 'A3' | 'A4' | 'A5' | 'letter' | 'legel' |
+        'A3 landscape' | 'A4 landscape' | 'A5 landscape' | 'letter landscape' | 'legel landscape'
 
 export default defineComponent({
   setup() {
-    const data = reactive(rawData)
+    const data = reactive(rawData())
     const pages = reactive<PageData[]>([])
     const currentPage = ref<typeof PageComponent | null>(null)
-    const demoMode = reactive({value: 'no'})
+    const demoMode = reactive<{value: 'yes'|'no'}>({value: 'no'})
+    const paperFormats = reactive<{value: PaperFormats}>({value: 'A4'})
     const newPage = () => {
       pages.push({
         blocks: [],
@@ -88,16 +119,29 @@ export default defineComponent({
       })
     }
 
-    onMounted(async () => {
+    watch(paperFormats, (newVal) => {
+      document.body.className = newVal.value
+      renderPage()
+    })
+
+    const renderPage = async () => {
+      // recycle the data blocks
+      if (pages.length > 0) {
+        data.blocks = pages.map(it => it.blocks)
+                .reduce((acc, curr) => {
+                  return [...acc, ...curr]
+                }, [])
+        pages.length = 0 // clear the pages array
+      }
       newPage()
-      await waitUI()
+      await waitUI(demoMode.value)
       do {
         let currentBlock
         const lastPage = pages[pages.length - 1]
         if (currentPage?.value?.isOverflowed()) {
           currentBlock = lastPage.blocks.pop()
           newPage()
-          await waitUI()
+          await waitUI(demoMode.value)
         } else {
           if (data.blocks.length === 0) {
             break
@@ -105,17 +149,23 @@ export default defineComponent({
           currentBlock = data.blocks.shift()!!
         }
         pages[pages.length - 1].blocks.push(currentBlock!!)
-        await waitUI()
+        await waitUI(demoMode.value)
       } while (data.blocks.length >= 0)
 
       const totalPage = pages.length
       pages.forEach(page => page.totalPage = totalPage)
+    }
+
+    onMounted(async () => {
+      await renderPage()
     })
     return {
       data,
       pages,
       currentPage,
-      demoMode
+      demoMode,
+      renderPage,
+      paperFormats
     }
   },
   components: {PageComponent}
@@ -134,4 +184,7 @@ export default defineComponent({
     border: 1px #555555 dashed;
   }
 }
+  .tool-bar {
+    margin: 20px;
+  }
 </style>
