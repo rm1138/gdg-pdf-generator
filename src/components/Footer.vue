@@ -1,7 +1,8 @@
 <template>
     <div class="footer block">
-        <div class="page-no">P.{{pageNo}}/{{totalPage}}</div>
-        <h6>{{footerMsg}}</h6>
+        <div class="page-no">Page {{pageNo}} of {{totalPage}}</div>
+        <p>{{footerMsg}}</p>
+        <div class="the-10mm-box"><span>This box is <span class="bold">exactly</span> 190mm x 10mm</span></div>
     </div>
 </template>
 
@@ -24,12 +25,23 @@
         left: 0;
         right: 0;
         text-align: center;
-        margin: pxToMm(80);
+        margin: 10mm 10mm;
         vertical-align: center;
     }
     .page-no {
         position: absolute;
-        bottom: 0;
-        right: 0;
+        bottom: 0mm;
+        right: 1mm;
     }
+    .the-10mm-box {
+        width: calc(190mm - pxToMm(2));
+        height: 10mm;
+        border: pxToMm(1) #000000 solid;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        .bold {
+            font-weight: bold;
+        }
+      }
 </style>

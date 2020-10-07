@@ -17,12 +17,16 @@
         <option value="letter landscape">Letter Landscape</option>
         <option value="legal landscape">Legal Landscape</option>
       </select>
+      <select v-model="renderFlow.value" title="Smart: calculate the height of each block and fit them into pages. Dummy: render a block into a page the check the page is overflow or not.">
+        <option value="smart">Smart</option>
+        <option value="dummy">Dummy</option>
+      </select>
       <button @click="renderPage">Rerender</button>
       <p>Total time: {{ renderTime.total }}ms, Time per page: {{ renderTime.perPage }}ms, Time per block: {{ renderTime.perBlock }}ms, Progress: {{ renderedPercentage }}%</p>
       <br/>
       <a href="https://github.com/rm1138/gdg-pdf-generator">Source Code</a>
     </div>
-    <div class="wrapper" :class="{show: ready}">
+    <div class="wrapper" :class="{show: ready.value}">
       <page-component
           :class="{ 'demo-mode': demoMode.value === 'yes' }"
           :key="page"
@@ -65,13 +69,14 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
   let lastType: 'h2' | 'image' | 'p' | null = null
   return {
     blocks: Array.from(Array(blocksCount).keys())
+            .map(idx => idx + 1)
             .map(idx => {
               const random = Math.random()
-              if (idx === 0 || (lastType !== 'h2' && random > 0.7)) {
+              if (idx === 1 || (lastType !== 'h2' && random > 0.7)) {
                 lastType = 'h2'
                 return {
                   blockType: 'paragraph',
-                  content: short.generateSentences(),
+                  content: `${idx}. ${short.generateSentences()}`,
                   typography: 'h2',
                 }
               } else if (lastType === 'p' && random > 0.5) {
@@ -82,7 +87,7 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
                 return {
                   blockType: 'image',
                   url: `https://picsum.photos/${width}/${height}?t=${Math.random()}`,
-                  caption: short.generateSentences(1),
+                  caption: `${idx}. ${short.generateSentences(1)}`,
                   width,
                   height
                 }
@@ -90,7 +95,7 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
                 lastType = 'p'
                 return {
                   blockType: 'paragraph',
-                  content: long.generateParagraphs(1),
+                  content: `${idx}. ${long.generateParagraphs(1)}`,
                   typography: 'p',
                 }
               }
@@ -102,6 +107,7 @@ async function waitUI(demoMode: 'yes' | 'no' = 'no') {
   if (demoMode === 'yes') {
     return new Promise(resolve => setTimeout(resolve, 500))
   } else {
+    // return new Promise(resolve => setTimeout(resolve, 0))
     return new Promise(resolve => requestAnimationFrame(resolve))
   }
 }
@@ -118,7 +124,8 @@ export default defineComponent({
     const demoMode = reactive<{value: 'yes'|'no'}>({value: 'no'})
     const paperFormats = reactive<{value: PaperFormats}>({value: 'A4'})
     const renderTime = reactive({total: 0, perPage: 0, perBlock: 0})
-    const ready = computed(() => demoMode.value === 'yes' || data.blocks.length === 0)
+    const renderFlow = reactive<{value: 'dummy'|'smart'}>({value: 'dummy'})
+    const ready = reactive({value: false})
     const renderedPercentage = computed(() => Math.round(((blocksCount.value - data.blocks.length) / blocksCount.value) * 100))
     let lastNewPage: number | null = null
     const newPage = () => {
@@ -137,16 +144,24 @@ export default defineComponent({
 
     watch(paperFormats, (newVal) => {
       document.body.className = newVal.value
-      renderPage()
     })
 
     watch(blocksCount,(newValue) => {
       data.blocks = rawData(newValue.value).blocks
       pages.length = 0
-      renderPage()
     })
 
     const renderPage = async () => {
+      ready.value = false//!!demoMode.value;
+      if (renderFlow.value === 'smart') {
+        await smartRender()
+      } else {
+        await dummyRender()
+      }
+      ready.value = true
+    }
+
+    const dummyRender = async () => {
       renderTime.perBlock = 0
       renderTime.perPage = 0
       renderTime.total = 0
@@ -187,6 +202,43 @@ export default defineComponent({
       renderTime.perBlock = Math.round((now - start) / blocksCount.value)
     }
 
+    const smartRender = async () => {
+      const start = Date.now()
+      // recycle the data blocks
+      if (pages.length > 0) {
+        data.blocks = [...data.blocks, ...pages.map(it => it.blocks)
+                .reduce((acc, curr) => {
+                  return [...acc, ...curr]
+                }, [])]
+        pages.length = 0 // clear the pages array
+      }
+      await newPage()
+      const firstPage = pages[0]
+      firstPage.blocks = data.blocks
+      data.blocks = []
+      await waitUI()
+
+      const firstPageRef = currentPage.value
+
+      do {
+        await newPage()
+        const lastPage = pages[pages.length - 1]
+        lastPage.blocks = firstPageRef!!.getPagedBlock()
+      } while (firstPage.blocks.length > 0)
+
+      pages.shift()
+      const totalPage = pages.length
+      pages.forEach((page, idx) => {
+        page.totalPage = totalPage
+        page.pageNo = idx + 1
+      })
+
+      const now = Date.now()
+      renderTime.total = Math.round(now - start)
+      renderTime.perPage = Math.round((now - start) / totalPage)
+      renderTime.perBlock = Math.round((now - start) / blocksCount.value)
+    }
+
     onMounted(async () => {
       await renderPage()
     })
@@ -200,7 +252,8 @@ export default defineComponent({
       blocksCount,
       renderTime,
       ready,
-      renderedPercentage
+      renderedPercentage,
+      renderFlow
     }
   },
   components: {PageComponent}
@@ -209,10 +262,9 @@ export default defineComponent({
 
 <style lang="scss">
 @import "~paper-css/paper.css";
-
   // compensate the demo border
   .block {
-    border: 1px #ffffff dashed;
+    border: 1px rgba(0, 0, 0, 0) dashed;
   }
   .demo-mode {
     .block {
@@ -221,6 +273,11 @@ export default defineComponent({
   }
   .tool-bar {
     margin: 20px;
+  }
+  @media print {
+    .tool-bar {
+      display: none;
+    }
   }
   .wrapper.show {
     visibility: visible;
