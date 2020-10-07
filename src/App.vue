@@ -5,7 +5,8 @@
       <input id="demoMode" type="checkbox" v-model="demoMode.value" true-value="yes" false-value="no"/>
       <label for="blocksCount">Blocks Count:</label>
       <input id="blocksCount" type="number" step="10" v-model.number="blocksCount.value"/>
-      <select v-model="paperFormats.value">
+      <label for="paperFormats">Paper Formats:</label>
+      <select id="paperFormats" v-model="paperFormats.value">
         <option value="A3">A3</option>
         <option value="A4">A4</option>
         <option value="A5">A5</option>
@@ -17,16 +18,23 @@
         <option value="letter landscape">Letter Landscape</option>
         <option value="legal landscape">Legal Landscape</option>
       </select>
-      <select v-model="renderFlow.value" title="Smart: calculate the height of each block and fit them into pages. Dummy: render a block into a page the check the page is overflow or not.">
-        <option value="smart">Smart</option>
-        <option value="dummy">Dummy</option>
+      <label for="renderFlow">Layout Algorithm:</label>
+      <select id="renderFlow" v-model="renderFlow.value" title="Smart: calculate the height of each block and fit them into pages. Dummy: render a block into a page the check the page is overflow or not.">
+        <option value="pre-calculate">Pre-calculate</option>
+        <option value="linear">Linear</option>
+      </select>
+      <label for="waitMode">UI sync mode:</label>
+      <select id="waitMode" v-model="waitMode.value">
+        <option value="animation">requestAnimationFrame</option>
+        <option value="0ms">setTimeout 0ms</option>
+        <option value="500ms">setTimeout 500ms</option>
       </select>
       <button @click="renderPage">Rerender</button>
-      <p>Total time: {{ renderTime.total }}ms, Time per page: {{ renderTime.perPage }}ms, Time per block: {{ renderTime.perBlock }}ms, Progress: {{ renderedPercentage }}%</p>
+      <p>Total time: {{ renderTime.total }}ms, Time per page: {{ renderTime.perPage }}ms, Time per block: {{ renderTime.perBlock }}ms</p>
       <br/>
       <a href="https://github.com/rm1138/gdg-pdf-generator">Source Code</a>
     </div>
-    <div class="wrapper" :class="{show: ready.value}">
+    <div class="wrapper" :class="{show: ready.value || demoMode.value === 'yes'}">
       <page-component
           :class="{ 'demo-mode': demoMode.value === 'yes' }"
           :key="page"
@@ -39,7 +47,7 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, onMounted, reactive, ref, watch, computed} from 'vue'
+import {defineComponent, onMounted, reactive, ref, watch} from 'vue'
 import PageComponent from '@/components/Page.vue'
 import {LoremIpsum} from "lorem-ipsum"
 
@@ -103,14 +111,7 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
   }
 }
 
-async function waitUI(demoMode: 'yes' | 'no' = 'no') {
-  if (demoMode === 'yes') {
-    return new Promise(resolve => setTimeout(resolve, 500))
-  } else {
-    //return new Promise(resolve => setTimeout(resolve, 0))
-    return new Promise(resolve => requestAnimationFrame(resolve))
-  }
-}
+
 
 type PaperFormats = 'A3' | 'A4' | 'A5' | 'letter' | 'legel' |
         'A3 landscape' | 'A4 landscape' | 'A5 landscape' | 'letter landscape' | 'legel landscape'
@@ -124,14 +125,10 @@ export default defineComponent({
     const demoMode = reactive<{value: 'yes'|'no'}>({value: 'no'})
     const paperFormats = reactive<{value: PaperFormats}>({value: 'A4'})
     const renderTime = reactive({total: 0, perPage: 0, perBlock: 0})
-    const renderFlow = reactive<{value: 'dummy'|'smart'}>({value: 'dummy'})
+    const renderFlow = reactive<{value: 'linear'|'pre-calculate'}>({value: 'linear'})
+    const waitMode = reactive<{value: 'animation' | '0ms' | '500ms'}>({value: 'animation'})
     const ready = reactive({value: false})
-    const renderedPercentage = computed(() => Math.round(((blocksCount.value - data.blocks.length) / blocksCount.value) * 100))
-    let lastNewPage: number | null = null
     const newPage = () => {
-      if (lastNewPage !== null) {
-        renderTime.perPage = Math.round((Date.now() - lastNewPage))
-      }
       pages.push({
         blocks: [],
         title: 'GDG Hong Kong DevFest 2020 Demo',
@@ -139,7 +136,6 @@ export default defineComponent({
         totalPage: 0,
         footerMsg: 'Dummy footer message.'
       })
-      lastNewPage = Date.now()
     }
 
     watch(paperFormats, (newVal) => {
@@ -151,9 +147,23 @@ export default defineComponent({
       pages.length = 0
     })
 
+
+    const waitUI = async () => {
+      if (waitMode.value === '500ms') {
+        return new Promise(resolve => setTimeout(resolve, 500))
+      } else if (waitMode.value === '0ms') {
+        return new Promise(resolve => setTimeout(resolve, 0))
+      } else if (waitMode.value === 'animation') {
+        return new Promise(resolve => requestAnimationFrame(resolve))
+      }
+    }
+
     const renderPage = async () => {
+      renderTime.perBlock = 0
+      renderTime.perPage = 0
+      renderTime.total = 0
       ready.value = false//!!demoMode.value;
-      if (renderFlow.value === 'smart') {
+      if (renderFlow.value === 'pre-calculate') {
         await smartRender()
       } else {
         await dummyRender()
@@ -162,9 +172,6 @@ export default defineComponent({
     }
 
     const dummyRender = async () => {
-      renderTime.perBlock = 0
-      renderTime.perPage = 0
-      renderTime.total = 0
       const start = Date.now()
       // recycle the data blocks
       if (pages.length > 0) {
@@ -175,14 +182,13 @@ export default defineComponent({
         pages.length = 0 // clear the pages array
       }
       newPage()
-      await waitUI(demoMode.value)
+      await waitUI()
       do {
         let currentBlock
         const lastPage = pages[pages.length - 1]
         if (currentPage?.value?.isOverflowed()) {
           currentBlock = lastPage.blocks.pop()
           newPage()
-          await waitUI(demoMode.value)
         } else {
           if (data.blocks.length === 0) {
             break
@@ -190,7 +196,7 @@ export default defineComponent({
           currentBlock = data.blocks.shift()!!
         }
         pages[pages.length - 1].blocks.push(currentBlock!!)
-        await waitUI(demoMode.value)
+        await waitUI()
       } while (data.blocks.length >= 0)
 
       const totalPage = pages.length
@@ -203,9 +209,6 @@ export default defineComponent({
     }
 
     const smartRender = async () => {
-      renderTime.perBlock = 0
-      renderTime.perPage = 0
-      renderTime.total = 0
       const start = Date.now()
       // recycle the data blocks
       if (pages.length > 0) {
@@ -219,7 +222,7 @@ export default defineComponent({
       const firstPage = pages[0]
       firstPage.blocks = data.blocks
       data.blocks = []
-      await waitUI(demoMode.value)
+      await waitUI()
 
       const firstPageRef = currentPage.value
 
@@ -243,9 +246,8 @@ export default defineComponent({
       renderTime.perBlock = Math.round((now - start) / blocksCount.value)
     }
 
-    onMounted(async () => {
-      await renderPage()
-    })
+    onMounted(async () => await renderPage())
+
     return {
       data,
       pages,
@@ -256,8 +258,8 @@ export default defineComponent({
       blocksCount,
       renderTime,
       ready,
-      renderedPercentage,
-      renderFlow
+      renderFlow,
+      waitMode
     }
   },
   components: {PageComponent}
@@ -285,8 +287,11 @@ export default defineComponent({
   }
   .wrapper.show {
     visibility: visible;
+    height: auto;
   }
   .wrapper {
+    height: 0;
+    overflow-y: hidden;
     visibility: hidden;
     text-align: center;
   }
