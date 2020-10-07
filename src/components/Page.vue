@@ -41,25 +41,31 @@
                     }
                     return lastBlockEl.offsetTop + lastBlockEl.offsetHeight > footerEl.offsetTop
                 },
-                getPagedBlock(): Block[] {
+                getPagedBlock(): number[] {
+                    const headerEl = header?.value?.$el
                     const footerEl = footer?.value?.$el
-                    if (footerEl == null) {
-                        return []
+                    const result: number[] = []
+                    if (headerEl == null || footerEl == null) {
+                        return result
                     }
-                    let idx = 0
+                    let blockCursor = 0
+                    let availableSpace = footerEl.offsetTop - (headerEl.offsetTop + headerEl.offsetHeight)
+                    let pageRemainSpace = availableSpace
+                    let count = 0
                     do {
-                        if (!blockRefs[idx]) {
-                            break
+                        const blockEl = blockRefs[blockCursor]?.$el
+                        pageRemainSpace -= blockEl.offsetHeight
+                        if (pageRemainSpace < 0) {
+                            result.push(count)
+                            count = 0
+                            pageRemainSpace = availableSpace
+                            continue
                         }
-                        const blockEl = blockRefs[idx]?.$el
-                        if (blockEl.offsetTop + blockEl.offsetHeight > footerEl.offsetTop) {
-                            break
-                        }
-                        idx++
-                    } while (props.page.blocks.length > 0)
-                    blockRefs.length = 0
-                    // eslint-disable-next-line vue/no-mutating-props
-                    return props.page.blocks.splice(0, idx)
+                        count++
+                        blockCursor++
+                    } while (blockCursor < blockRefs.length)
+                    result.push(count)
+                    return result
                 }
             }
         }

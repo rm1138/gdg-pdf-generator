@@ -107,7 +107,7 @@ async function waitUI(demoMode: 'yes' | 'no' = 'no') {
   if (demoMode === 'yes') {
     return new Promise(resolve => setTimeout(resolve, 500))
   } else {
-    // return new Promise(resolve => setTimeout(resolve, 0))
+    //return new Promise(resolve => setTimeout(resolve, 0))
     return new Promise(resolve => requestAnimationFrame(resolve))
   }
 }
@@ -203,6 +203,9 @@ export default defineComponent({
     }
 
     const smartRender = async () => {
+      renderTime.perBlock = 0
+      renderTime.perPage = 0
+      renderTime.total = 0
       const start = Date.now()
       // recycle the data blocks
       if (pages.length > 0) {
@@ -212,19 +215,20 @@ export default defineComponent({
                 }, [])]
         pages.length = 0 // clear the pages array
       }
-      await newPage()
+      newPage()
       const firstPage = pages[0]
       firstPage.blocks = data.blocks
       data.blocks = []
-      await waitUI()
+      await waitUI(demoMode.value)
 
       const firstPageRef = currentPage.value
 
-      do {
-        await newPage()
+      let blocksToAppend = firstPageRef!!.getPagedBlock()
+      for (const count of blocksToAppend) {
+        newPage()
         const lastPage = pages[pages.length - 1]
-        lastPage.blocks = firstPageRef!!.getPagedBlock()
-      } while (firstPage.blocks.length > 0)
+        lastPage.blocks = firstPage.blocks.splice(0, count)
+      }
 
       pages.shift()
       const totalPage = pages.length
