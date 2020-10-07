@@ -1,9 +1,10 @@
 <template>
   <div>
     <div class="tool-bar">
-      <label for="demoMode">Demo</label>
+      <label for="demoMode">Demo Mode:</label>
       <input id="demoMode" type="checkbox" v-model="demoMode.value" true-value="yes" false-value="no"/>
-      <button @click="renderPage">Render</button>
+      <label for="blocksCount">Blocks Count:</label>
+      <input id="blocksCount" type="number" step="10" v-model.number="blocksCount.value"/>
       <select v-model="paperFormats.value">
         <option value="A3">A3</option>
         <option value="A4">A4</option>
@@ -15,21 +16,26 @@
         <option value="A5 landscape">A5 Landscape</option>
         <option value="letter landscape">Letter Landscape</option>
         <option value="legal landscape">Legal Landscape</option>
-      </select><br/>
+      </select>
+      <button @click="renderPage">Rerender</button>
+      <p>Total time: {{ renderTime.total }}ms, Time per page: {{ renderTime.perPage }}ms, Time per block: {{ renderTime.perBlock }}ms, Progress: {{ renderedPercentage }}%</p>
+      <br/>
       <a href="https://github.com/rm1138/gdg-pdf-generator">Source Code</a>
     </div>
-    <page-component
-        :class="{ 'demo-mode': demoMode.value === 'yes' }"
-        :key="page"
-        :page="page"
-        ref="currentPage"
-        v-for="(page) in pages"/>
+    <div class="wrapper" :class="{show: ready}">
+      <page-component
+          :class="{ 'demo-mode': demoMode.value === 'yes' }"
+          :key="page"
+          :page="page"
+          ref="currentPage"
+          v-for="(page) in pages"/>
+    </div>
   </div>
 
 </template>
 
 <script lang="ts">
-import {defineComponent, onMounted, reactive, ref, watch} from 'vue'
+import {defineComponent, onMounted, reactive, ref, watch, computed} from 'vue'
 import PageComponent from '@/components/Page.vue'
 import {LoremIpsum} from "lorem-ipsum"
 
@@ -55,10 +61,10 @@ const long = new LoremIpsum({
   }
 })
 
-let lastType: 'h2' | 'image' | 'p' | null = null
-const rawData: () => Data = () => {
+const rawData: (blocksCount: number) => Data = (blocksCount) => {
+  let lastType: 'h2' | 'image' | 'p' | null = null
   return {
-    blocks: Array.from(Array(50).keys())
+    blocks: Array.from(Array(blocksCount).keys())
             .map(idx => {
               const random = Math.random()
               if (idx === 0 || (lastType !== 'h2' && random > 0.7)) {
@@ -105,12 +111,20 @@ type PaperFormats = 'A3' | 'A4' | 'A5' | 'letter' | 'legel' |
 
 export default defineComponent({
   setup() {
-    const data = reactive(rawData())
+    const blocksCount = reactive({value:50})
+    const data = reactive(rawData(blocksCount.value))
     const pages = reactive<PageData[]>([])
     const currentPage = ref<typeof PageComponent | null>(null)
     const demoMode = reactive<{value: 'yes'|'no'}>({value: 'no'})
     const paperFormats = reactive<{value: PaperFormats}>({value: 'A4'})
+    const renderTime = reactive({total: 0, perPage: 0, perBlock: 0})
+    const ready = computed(() => demoMode.value === 'yes' || data.blocks.length === 0)
+    const renderedPercentage = computed(() => Math.round(((blocksCount.value - data.blocks.length) / blocksCount.value) * 100))
+    let lastNewPage: number | null = null
     const newPage = () => {
+      if (lastNewPage !== null) {
+        renderTime.perPage = Math.round((Date.now() - lastNewPage))
+      }
       pages.push({
         blocks: [],
         title: 'GDG Hong Kong DevFest 2020 Demo',
@@ -118,6 +132,7 @@ export default defineComponent({
         totalPage: 0,
         footerMsg: 'Dummy footer message.'
       })
+      lastNewPage = Date.now()
     }
 
     watch(paperFormats, (newVal) => {
@@ -125,13 +140,23 @@ export default defineComponent({
       renderPage()
     })
 
+    watch(blocksCount,(newValue) => {
+      data.blocks = rawData(newValue.value).blocks
+      pages.length = 0
+      renderPage()
+    })
+
     const renderPage = async () => {
+      renderTime.perBlock = 0
+      renderTime.perPage = 0
+      renderTime.total = 0
+      const start = Date.now()
       // recycle the data blocks
       if (pages.length > 0) {
-        data.blocks = pages.map(it => it.blocks)
+        data.blocks = [...data.blocks, ...pages.map(it => it.blocks)
                 .reduce((acc, curr) => {
                   return [...acc, ...curr]
-                }, [])
+                }, [])]
         pages.length = 0 // clear the pages array
       }
       newPage()
@@ -155,6 +180,11 @@ export default defineComponent({
 
       const totalPage = pages.length
       pages.forEach(page => page.totalPage = totalPage)
+
+      const now = Date.now()
+      renderTime.total = Math.round(now - start)
+      renderTime.perPage = Math.round((now - start) / totalPage)
+      renderTime.perBlock = Math.round((now - start) / blocksCount.value)
     }
 
     onMounted(async () => {
@@ -166,7 +196,11 @@ export default defineComponent({
       currentPage,
       demoMode,
       renderPage,
-      paperFormats
+      paperFormats,
+      blocksCount,
+      renderTime,
+      ready,
+      renderedPercentage
     }
   },
   components: {PageComponent}
@@ -176,16 +210,28 @@ export default defineComponent({
 <style lang="scss">
 @import "~paper-css/paper.css";
 
-// compensate the demo border
-.block {
-  border: 1px #ffffff dashed;
-}
-.demo-mode {
+  // compensate the demo border
   .block {
-    border: 1px #555555 dashed;
+    border: 1px #ffffff dashed;
   }
-}
+  .demo-mode {
+    .block {
+      border: 1px #555555 dashed;
+    }
+  }
   .tool-bar {
     margin: 20px;
+  }
+  .wrapper.show {
+    visibility: visible;
+  }
+  .wrapper {
+    visibility: hidden;
+    text-align: center;
+  }
+  .sheet {
+    display: inline-block;
+    margin: 5mm;
+    text-align: left;
   }
 </style>
