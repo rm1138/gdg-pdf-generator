@@ -2,14 +2,15 @@
     <div class="sheet padding-10mm">
         <header-component ref="header" :title="page.title"/>
         <block-component
-                v-for="(block, idx) in page.blocks"
-                :block="block"
-                :key="idx"
-                :ref="setBlockRefs"/>
-        <footer-component ref="footer"
-                          :footer-msg="page.footerMsg"
-                          :page-no="page.pageNo"
-                          :total-page="page.totalPage"/>
+            v-for="(block, idx) in page.blocks"
+            :block="block"
+            :key="idx"
+            :ref="setBlockRefs"/>
+        <footer-component
+            ref="footer"
+            :footer-msg="page.footerMsg"
+            :page-no="page.pageNo"
+            :total-page="page.totalPage"/>
     </div>
 </template>
 <script lang="ts">
@@ -41,7 +42,7 @@
                     }
                     return lastBlockEl.offsetTop + lastBlockEl.offsetHeight > footerEl.offsetTop
                 },
-                getPagedBlock(): number[] {
+                getPagedBlockMap(): number[] {
                     const headerEl = header?.value?.$el
                     const footerEl = footer?.value?.$el
                     const result: number[] = []
@@ -49,7 +50,7 @@
                         return result
                     }
                     let blockCursor = 0
-                    let availableSpace = footerEl.offsetTop - blockRefs[0]?.$el?.offsetTop
+                    let availableSpace = footerEl.offsetTop - (headerEl.offsetTop + headerEl.offsetHeight)
                     let pageRemainSpace = availableSpace
                     let count = 0
                     do {

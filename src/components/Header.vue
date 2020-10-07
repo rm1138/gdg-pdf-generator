@@ -1,5 +1,7 @@
 <template>
-<h1 class="title block">{{title}}</h1>
+  <div class="block">
+    <h1 class="title">{{title}}</h1>
+  </div>
 </template>
 
 <script lang="ts">
@@ -14,6 +16,6 @@
 
 <style lang="scss" scoped>
 .title {
-    text-align: center;
+  text-align: center;
 }
 </style>

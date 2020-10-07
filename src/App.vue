@@ -12,11 +12,11 @@
         <option value="A5">A5</option>
         <option value="letter">Letter</option>
         <option value="legal">Legal</option>
-        <option value="A3 landscape">A3 Landscape</option>
-        <option value="A4 landscape">A4 Landscape</option>
-        <option value="A5 landscape">A5 Landscape</option>
-        <option value="letter landscape">Letter Landscape</option>
-        <option value="legal landscape">Legal Landscape</option>
+        <option value="A3-l">A3 Landscape</option>
+        <option value="A4-l">A4 Landscape</option>
+        <option value="A5-l">A5 Landscape</option>
+        <option value="letter-l">Letter Landscape</option>
+        <option value="legal-l">Legal Landscape</option>
       </select>
       <label for="renderFlow">Layout Algorithm:</label>
       <select id="renderFlow" v-model="renderFlow.value" title="Smart: calculate the height of each block and fit them into pages. Dummy: render a block into a page the check the page is overflow or not.">
@@ -114,7 +114,7 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
 
 
 type PaperFormats = 'A3' | 'A4' | 'A5' | 'letter' | 'legel' |
-        'A3 landscape' | 'A4 landscape' | 'A5 landscape' | 'letter landscape' | 'legel landscape'
+        'A3-l' | 'A4-l' | 'A5-l' | 'letter-l' | 'legel-l'
 
 export default defineComponent({
   setup() {
@@ -128,15 +128,7 @@ export default defineComponent({
     const renderFlow = reactive<{value: 'linear'|'pre-calculate'}>({value: 'linear'})
     const waitMode = reactive<{value: 'animation' | '0ms' | '500ms'}>({value: 'animation'})
     const ready = reactive({value: false})
-    const newPage = () => {
-      pages.push({
-        blocks: [],
-        title: 'GDG Hong Kong DevFest 2020 Demo',
-        pageNo: pages.length + 1,
-        totalPage: 0,
-        footerMsg: 'Dummy footer message.'
-      })
-    }
+    let start = Date.now()
 
     watch(paperFormats, (newVal) => {
       document.body.className = newVal.value
@@ -147,8 +139,17 @@ export default defineComponent({
       pages.length = 0
     })
 
+    const newPage = () => {
+      pages.push({
+        blocks: [],
+        title: 'GDG Hong Kong DevFest 2020 Demo',
+        pageNo: pages.length + 1,
+        totalPage: 0,
+        footerMsg: 'Dummy footer message.'
+      })
+    }
 
-    const waitUI = async () => {
+    const syncUI = async () => {
       if (waitMode.value === '500ms') {
         return new Promise(resolve => setTimeout(resolve, 500))
       } else if (waitMode.value === '0ms') {
@@ -159,30 +160,48 @@ export default defineComponent({
     }
 
     const renderPage = async () => {
+      preRender()
+      if (renderFlow.value === 'pre-calculate') {
+        await preCalculateRender()
+      } else {
+        await linearRender()
+      }
+      postRender()
+    }
+
+    const preRender = () => {
       renderTime.perBlock = 0
       renderTime.perPage = 0
       renderTime.total = 0
-      ready.value = false//!!demoMode.value;
-      if (renderFlow.value === 'pre-calculate') {
-        await smartRender()
-      } else {
-        await dummyRender()
-      }
-      ready.value = true
-    }
-
-    const dummyRender = async () => {
-      const start = Date.now()
+      ready.value = false
+      start = Date.now()
       // recycle the data blocks
       if (pages.length > 0) {
         data.blocks = [...data.blocks, ...pages.map(it => it.blocks)
-                .reduce((acc, curr) => {
-                  return [...acc, ...curr]
-                }, [])]
-        pages.length = 0 // clear the pages array
+            .reduce((acc, curr) => [...acc, ...curr], [])]
+        // clear the pages array
+        pages.length = 0
       }
+    }
+
+    const postRender = () => {
+      const totalPage = pages.length
+      // update page number and total page number
+      pages.forEach((page, idx) => {
+        page.totalPage = totalPage
+        page.pageNo = idx + 1
+      })
+
+      // update benchmark stats
+      const now = Date.now()
+      renderTime.total = Math.round(now - start)
+      renderTime.perPage = Math.round((now - start) / totalPage)
+      renderTime.perBlock = Math.round((now - start) / blocksCount.value)
+      ready.value = true
+    }
+
+    const linearRender = async () => {
       newPage()
-      await waitUI()
       do {
         let currentBlock
         const lastPage = pages[pages.length - 1]
@@ -196,57 +215,32 @@ export default defineComponent({
           currentBlock = data.blocks.shift()!!
         }
         pages[pages.length - 1].blocks.push(currentBlock!!)
-        await waitUI()
+        await syncUI()
       } while (data.blocks.length >= 0)
-
-      const totalPage = pages.length
-      pages.forEach(page => page.totalPage = totalPage)
-
-      const now = Date.now()
-      renderTime.total = Math.round(now - start)
-      renderTime.perPage = Math.round((now - start) / totalPage)
-      renderTime.perBlock = Math.round((now - start) / blocksCount.value)
     }
 
-    const smartRender = async () => {
-      const start = Date.now()
-      // recycle the data blocks
-      if (pages.length > 0) {
-        data.blocks = [...data.blocks, ...pages.map(it => it.blocks)
-                .reduce((acc, curr) => {
-                  return [...acc, ...curr]
-                }, [])]
-        pages.length = 0 // clear the pages array
-      }
+    const preCalculateRender = async () => {
       newPage()
       const firstPage = pages[0]
       firstPage.blocks = data.blocks
       data.blocks = []
-      await waitUI()
+      await syncUI()
 
       const firstPageRef = currentPage.value
 
-      let blocksToAppend = firstPageRef!!.getPagedBlock()
-      for (const count of blocksToAppend) {
+      // use the first page to measure the blocks size
+      let blockCountMap = firstPageRef!!.getPagedBlockMap()
+      for (const count of blockCountMap) {
         newPage()
         const lastPage = pages[pages.length - 1]
         lastPage.blocks = firstPage.blocks.splice(0, count)
       }
 
+      // remove the first page, as it is empty now
       pages.shift()
-      const totalPage = pages.length
-      pages.forEach((page, idx) => {
-        page.totalPage = totalPage
-        page.pageNo = idx + 1
-      })
-
-      const now = Date.now()
-      renderTime.total = Math.round(now - start)
-      renderTime.perPage = Math.round((now - start) / totalPage)
-      renderTime.perBlock = Math.round((now - start) / blocksCount.value)
     }
 
-    onMounted(async () => await renderPage())
+    onMounted(renderPage)
 
     return {
       data,
