@@ -49,7 +49,7 @@
                         return result
                     }
                     let blockCursor = 0
-                    let availableSpace = footerEl.offsetTop - (headerEl.offsetTop + headerEl.offsetHeight)
+                    let availableSpace = footerEl.offsetTop - blockRefs[0]?.$el?.offsetTop
                     let pageRemainSpace = availableSpace
                     let count = 0
                     do {

@@ -299,5 +299,6 @@ export default defineComponent({
     display: inline-block;
     margin: 5mm;
     text-align: left;
+    content-visibility: auto;
   }
 </style>

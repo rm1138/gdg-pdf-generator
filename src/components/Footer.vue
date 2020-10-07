@@ -2,7 +2,7 @@
     <div class="footer block">
         <div class="page-no">Page {{pageNo}} of {{totalPage}}</div>
         <p>{{footerMsg}}</p>
-        <div class="the-10mm-box"><span>This box is <span class="bold">exactly</span> 190mm x 10mm</span></div>
+        <div class="the-10mm-box"><span>This box is <span class="bold">exactly</span> 100mm x 20mm</span></div>
     </div>
 </template>
 
@@ -34,8 +34,9 @@
         right: 1mm;
     }
     .the-10mm-box {
-        width: calc(190mm - pxToMm(2));
-        height: 10mm;
+        box-sizing: border-box;
+        width: 100mm;
+        height: 20mm;
         border: pxToMm(1) #000000 solid;
         display: flex;
         align-items: center;
