@@ -5,7 +5,9 @@
             v-for="(block, idx) in page.blocks"
             :block="block"
             :key="idx"
-            :ref="setBlockRefs"/>
+            :ref="setBlockRefs"
+            @image-loaded="(src) => $emit('image-loaded', src)"
+        />
         <footer-component
             ref="footer"
             :footer-msg="page.footerMsg"

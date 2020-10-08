@@ -1,5 +1,6 @@
 <template>
   <div>
+    <div v-if="ready.value && loadedImageCount.size === imageCount.value" id="content-ready"/>
     <div class="tool-bar">
       <label for="demoMode">Demo Mode:</label>
       <input id="demoMode" type="checkbox" v-model="demoMode.value" true-value="yes" false-value="no"/>
@@ -31,7 +32,6 @@
       </select>
       <button @click="renderPage">Rerender</button>
       <p>Total time: {{ renderTime.total }}ms, Time per page: {{ renderTime.perPage }}ms, Time per block: {{ renderTime.perBlock }}ms</p>
-      <br/>
       <a href="https://github.com/rm1138/gdg-pdf-generator">Source Code</a>
     </div>
     <div class="wrapper" :class="{show: ready.value || demoMode.value === 'yes'}">
@@ -40,10 +40,10 @@
           :key="page"
           :page="page"
           ref="currentPage"
+          @image-loaded="imageLoaded"
           v-for="(page) in pages"/>
     </div>
   </div>
-
 </template>
 
 <script lang="ts">
@@ -111,8 +111,6 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
   }
 }
 
-
-
 type PaperFormats = 'A3' | 'A4' | 'A5' | 'letter' | 'legel' |
         'A3-l' | 'A4-l' | 'A5-l' | 'letter-l' | 'legel-l'
 
@@ -128,6 +126,8 @@ export default defineComponent({
     const renderFlow = reactive<{value: 'linear'|'pre-calculate'}>({value: 'linear'})
     const waitMode = reactive<{value: 'animation' | '0ms' | '500ms'}>({value: 'animation'})
     const ready = reactive({value: false})
+    const loadedImageCount = reactive<Set<string>>( new Set())
+    const imageCount = reactive({value: -1})
     let start = Date.now()
 
     watch(paperFormats, (newVal) => {
@@ -174,6 +174,7 @@ export default defineComponent({
       renderTime.perPage = 0
       renderTime.total = 0
       ready.value = false
+      loadedImageCount.clear()
       start = Date.now()
       // recycle the data blocks
       if (pages.length > 0) {
@@ -182,6 +183,7 @@ export default defineComponent({
         // clear the pages array
         pages.length = 0
       }
+      imageCount.value = data.blocks.filter(it => it.blockType === 'image').length
     }
 
     const postRender = () => {
@@ -253,7 +255,12 @@ export default defineComponent({
       renderTime,
       ready,
       renderFlow,
-      waitMode
+      waitMode,
+      imageCount,
+      loadedImageCount,
+      imageLoaded(src: string) {
+        loadedImageCount.add(src)
+      }
     }
   },
   components: {PageComponent}
@@ -279,20 +286,22 @@ export default defineComponent({
       display: none;
     }
   }
-  .wrapper.show {
-    visibility: visible;
-    height: auto;
-  }
-  .wrapper {
-    height: 0;
-    overflow-y: hidden;
-    visibility: hidden;
-    text-align: center;
-  }
-  .sheet {
-    display: inline-block;
-    margin: 5mm;
-    text-align: left;
-    content-visibility: auto;
+  @media screen {
+    .wrapper.show {
+      visibility: visible;
+      height: auto;
+    }
+    .wrapper {
+      height: 0;
+      overflow-y: hidden;
+      visibility: hidden;
+      text-align: center;
+    }
+    .sheet {
+      display: inline-block;
+      margin: 5mm;
+      text-align: left;
+      content-visibility: auto;
+    }
   }
 </style>
