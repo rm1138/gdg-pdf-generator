@@ -13,16 +13,11 @@
         <option value="A5">A5</option>
         <option value="letter">Letter</option>
         <option value="legal">Legal</option>
-        <option value="A3-l">A3 Landscape</option>
-        <option value="A4-l">A4 Landscape</option>
-        <option value="A5-l">A5 Landscape</option>
-        <option value="letter-l">Letter Landscape</option>
-        <option value="legal-l">Legal Landscape</option>
-      </select>
-      <label for="renderFlow">Layout Algorithm:</label>
-      <select id="renderFlow" v-model="renderFlow.value" title="Smart: calculate the height of each block and fit them into pages. Dummy: render a block into a page the check the page is overflow or not.">
-        <option value="pre-calculate">Pre-calculate</option>
-        <option value="linear">Linear</option>
+        <option value="A3 landscape">A3 Landscape</option>
+        <option value="A4 landscape">A4 Landscape</option>
+        <option value="A5 landscape">A5 Landscape</option>
+        <option value="letter landscape">Letter Landscape</option>
+        <option value="legal landscape">Legal Landscape</option>
       </select>
       <label for="waitMode">UI sync mode:</label>
       <select id="waitMode" v-model="waitMode.value">
@@ -112,7 +107,7 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
 }
 
 type PaperFormats = 'A3' | 'A4' | 'A5' | 'letter' | 'legel' |
-        'A3-l' | 'A4-l' | 'A5-l' | 'letter-l' | 'legel-l'
+        'A3 landscape' | 'A4 landscape' | 'A5 landscape' | 'letter landscape' | 'legel landscape'
 
 export default defineComponent({
   setup() {
