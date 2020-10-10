@@ -25,6 +25,11 @@
         <option value="0ms">setTimeout 0ms</option>
         <option value="500ms">setTimeout 500ms</option>
       </select>
+      <label for="renderFlow">Layout Algorithm:</label>
+      <select id="renderFlow" v-model="renderFlow.value" title="Pre-calculate: calculate the height of each block and fit them into pages. Linear: render a block into a page the check the page is overflow or not.">
+        <option value="pre-calculate">Pre-calculate</option>
+        <option value="linear">Linear</option>
+      </select>
       <button @click="renderPage">Rerender</button>
       <p>Total time: {{ renderTime.total }}ms, Time per page: {{ renderTime.perPage }}ms, Time per block: {{ renderTime.perBlock }}ms</p>
       <a href="https://github.com/rm1138/gdg-pdf-generator">Source Code</a>
@@ -118,7 +123,7 @@ export default defineComponent({
     const demoMode = reactive<{value: 'yes'|'no'}>({value: 'no'})
     const paperFormats = reactive<{value: PaperFormats}>({value: 'A4'})
     const renderTime = reactive({total: 0, perPage: 0, perBlock: 0})
-    const renderFlow = reactive<{value: 'linear'|'pre-calculate'}>({value: 'linear'})
+    const renderFlow = reactive<{value: 'linear'|'pre-calculate'}>({value: 'pre-calculate'})
     const waitMode = reactive<{value: 'animation' | '0ms' | '500ms'}>({value: 'animation'})
     const ready = reactive({value: false})
     const loadedImageCount = reactive<Set<string>>( new Set())
