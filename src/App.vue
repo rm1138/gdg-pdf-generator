@@ -254,7 +254,7 @@ export default defineComponent({
               currentPageUsedSpace -= currentBlockHeight
               const [headerHeight, ...rowHeight] = currentBlock.heightMap!!
               // make sure the remain space able to fit the header and at least 1 row
-              currentPageUsedSpace += headerHeight + rowHeight[rowHeight.length - 1]
+              currentPageUsedSpace += headerHeight
               let rowToKeep = 0
               while (currentPageUsedSpace <= pageAvailableSpace) {
                 currentPageUsedSpace += rowHeight[rowToKeep]
