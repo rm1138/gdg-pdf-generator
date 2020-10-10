@@ -1,11 +1,13 @@
 <template>
-    <h1 v-if="typography === 'h1'">{{ content }}</h1>
-    <h2 v-if="typography === 'h2'">{{ content }}</h2>
-    <h3 v-if="typography === 'h3'">{{ content }}</h3>
-    <h4 v-if="typography === 'h4'">{{ content }}</h4>
-    <h5 v-if="typography === 'h5'">{{ content }}</h5>
-    <h6 v-if="typography === 'h6'">{{ content }}</h6>
-    <p v-if="typography === 'p'">{{ content }}</p>
+    <div class="block">
+        <h1 v-if="paragraph.typography === 'h1'">{{ paragraph.content }}</h1>
+        <h2 v-if="paragraph.typography === 'h2'">{{ paragraph.content }}</h2>
+        <h3 v-if="paragraph.typography === 'h3'">{{ paragraph.content }}</h3>
+        <h4 v-if="paragraph.typography === 'h4'">{{ paragraph.content }}</h4>
+        <h5 v-if="paragraph.typography === 'h5'">{{ paragraph.content }}</h5>
+        <h6 v-if="paragraph.typography === 'h6'">{{ paragraph.content }}</h6>
+        <p v-if="paragraph.typography === 'p'">{{ paragraph.content }}</p>
+    </div>
 </template>
 
 <script lang="ts">
@@ -14,8 +16,12 @@
     export default defineComponent({
         name: "Paragraph",
         props: {
-            content: {type: String, required: true},
-            typography: {type: String as PropType<Typography>, required: true}
+            paragraph: { type: Object as PropType<DummyParagraph>, required: true},
+        },
+        methods: {
+          getHeightMap(): number[] {
+            return [this.$el.offsetHeight]
+          }
         }
     })
 </script>

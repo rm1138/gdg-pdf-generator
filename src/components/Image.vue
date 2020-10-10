@@ -1,20 +1,27 @@
 <template>
-    <img :height="height" :src="src" :width="width" @load.once="$emit('image-loaded', src)" alt=""/>
-    <p class="caption" v-if="caption">{{caption}}</p>
+    <div class="block" ref="blockRef">
+        <img :style="{ height: image.height + 'px', width: image.width + 'px' }" :src="image.url" @load.once="$emit('image-loaded', image.src)" alt=""/>
+        <p class="caption" v-if="image.caption">{{image.caption}}</p>
+    </div>
 </template>
 
 <script lang="ts">
-    import {defineComponent} from 'vue'
+    import {defineComponent, PropType, ref} from 'vue'
 
     export default defineComponent({
-        name: "Image",
         emits: ['image-loaded'],
         props: {
-            src: {type: String, required: true},
-            width: {type: Number, required: true},
-            height: {type: Number, required: true},
-            caption: {type: String}
+            image: { type: Object as PropType<DummyImage>, required: true},
         },
+        setup() {
+          const blockRef = ref<HTMLDivElement | null>(null)
+          return {
+            blockRef,
+            getHeightMap(): number[] {
+              return [blockRef.value!!.offsetHeight]
+            }
+          }
+        }
     })
 </script>
 

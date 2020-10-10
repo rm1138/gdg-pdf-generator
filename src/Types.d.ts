@@ -1,5 +1,7 @@
-declare type Block = (Paragraph | Image | Table<any>) & {
+declare type Block = {
     blockType: 'paragraph' | 'image' | 'table'
+    heightMap?: number[]
+    splited?: booleamn
 }
 
 declare type Data = {
@@ -16,13 +18,13 @@ declare type PageData = {
 
 declare type Typography = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p'
 
-declare type Paragraph = {
+declare type DummyParagraph = {
     content: string
     typography: Typography
     blockType: 'paragraph'
 }
 
-declare type Image = {
+declare type DummyImage = {
     url: string
     caption?: string
     width?: number
@@ -30,15 +32,9 @@ declare type Image = {
     blockType: 'image'
 }
 
-declare type TableColumnFormatter<T> = {
-    label: string
-    key?: keyof T
-    formatter?: () => string
-    align: 'left' | 'right'
-}
-
-declare type Table<T> = {
-    columnFormatters: TableColumnFormatter<T>[]
-    data: T[]
+declare type DummyTable = {
+    titles: string[]
+    data: string[][]
+    caption: string
     blockType: 'table'
 }

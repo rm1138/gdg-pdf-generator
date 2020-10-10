@@ -1,13 +1,14 @@
 <template>
     <div class="sheet padding-10mm">
         <header-component ref="header" :title="page.title"/>
-        <block-component
+        <div
             v-for="(block, idx) in page.blocks"
-            :block="block"
             :key="idx"
-            :ref="setBlockRefs"
-            @image-loaded="(src) => $emit('image-loaded', src)"
-        />
+        >
+            <paragraph-component v-if="block.blockType === 'paragraph'" :paragraph="block" :ref="setBlockRefs" />
+            <image-component v-if="block.blockType === 'image'" :image="block" @image-loaded="(src) => $emit('image-loaded', src)" :ref="setBlockRefs"/>
+            <table-component v-if="block.blockType === 'table'" :table="block" :ref="setBlockRefs"/>
+        </div>
         <footer-component
             ref="footer"
             :footer-msg="page.footerMsg"
@@ -17,15 +18,17 @@
 </template>
 <script lang="ts">
     import {defineComponent, PropType, ref} from 'vue'
-    import BlockComponent from './Block.vue'
     import HeaderComponent from './Header.vue'
     import FooterComponent from './Footer.vue'
+    import ParagraphComponent from "@/components/Paragraph.vue";
+    import ImageComponent from "@/components/Image.vue";
+    import TableComponent from "@/components/Table.vue";
 
     export default defineComponent({
         props: {
             page: {type: Object as PropType<PageData>, required: true},
         },
-        components: {BlockComponent, HeaderComponent, FooterComponent},
+        components: { HeaderComponent, FooterComponent, ParagraphComponent, ImageComponent, TableComponent },
         setup(props) {
             const header = ref<typeof HeaderComponent | null>(null)
             const footer = ref<typeof FooterComponent | null>(null)
@@ -44,32 +47,19 @@
                     }
                     return lastBlockEl.offsetTop + lastBlockEl.offsetHeight > footerEl.offsetTop
                 },
-                getPagedBlockMap(): number[] {
-                    const headerEl = header?.value?.$el
-                    const footerEl = footer?.value?.$el
-                    const result: number[] = []
-                    if (headerEl == null || footerEl == null) {
-                        return result
-                    }
-                    let blockCursor = 0
-                    let availableSpace = footerEl.offsetTop - (headerEl.offsetTop + headerEl.offsetHeight)
-                    let pageRemainSpace = availableSpace
-                    let count = 0
-                    do {
-                        const blockEl = blockRefs[blockCursor]?.$el
-                        pageRemainSpace -= blockEl.offsetHeight
-                        if (pageRemainSpace < 0) {
-                            result.push(count)
-                            count = 0
-                            pageRemainSpace = availableSpace
-                            continue
-                        }
-                        count++
-                        blockCursor++
-                    } while (blockCursor < blockRefs.length)
-                    result.push(count)
-                    return result
-                }
+                getMeasuredBlocks(): Block[] {
+                    return props.page.blocks.map((block, idx) => {
+                      return {
+                        ...block,
+                        heightMap: blockRefs[idx].getHeightMap()
+                      }
+                    })
+                },
+                getPageAvailableSpace(): number {
+                  const headerEl = header?.value?.$el
+                  const footerEl = footer?.value?.$el
+                  return footerEl.offsetTop - (headerEl.offsetTop + headerEl.offsetHeight)
+                },
             }
         }
     })
