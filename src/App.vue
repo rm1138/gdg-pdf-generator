@@ -1,11 +1,25 @@
 <template>
   <div>
-    <div v-if="ready.value && loadedImageCount.size === imageCount.value" id="content-ready"/>
+    <div
+      v-if="ready.value && loadedImageCount.size === imageCount.value"
+      id="content-ready"
+    />
     <div class="tool-bar">
       <label for="demoMode">Demo Mode:</label>
-      <input id="demoMode" type="checkbox" v-model="demoMode.value" true-value="yes" false-value="no"/>
+      <input
+        id="demoMode"
+        v-model="demoMode.value"
+        false-value="no"
+        true-value="yes"
+        type="checkbox"
+      />
       <label for="blocksCount">Blocks Count:</label>
-      <input id="blocksCount" type="number" step="10" v-model.number="blocksCount.value"/>
+      <input
+        id="blocksCount"
+        v-model.number="blocksCount.value"
+        step="10"
+        type="number"
+      />
       <label for="paperFormats">Paper Formats:</label>
       <select id="paperFormats" v-model="paperFormats.value">
         <option value="A3">A3</option>
@@ -25,135 +39,164 @@
         <option value="0ms">setTimeout 0ms</option>
         <option value="500ms">setTimeout 500ms</option>
       </select>
-<!--      <label for="renderFlow">Layout Algorithm:</label>-->
-<!--      <select id="renderFlow" v-model="renderFlow.value" title="Pre-calculate: calculate the height of each block and fit them into pages. Linear: render a block into a page the check the page is overflow or not.">-->
-<!--        <option value="pre-calculate">Pre-calculate</option>-->
-<!--        <option value="linear">Linear</option>-->
-<!--      </select>-->
+      <!--      <label for="renderFlow">Layout Algorithm:</label>-->
+      <!--      <select id="renderFlow" v-model="renderFlow.value" title="Pre-calculate: calculate the height of each block and fit them into pages. Linear: render a block into a page the check the page is overflow or not.">-->
+      <!--        <option value="pre-calculate">Pre-calculate</option>-->
+      <!--        <option value="linear">Linear</option>-->
+      <!--      </select>-->
       <button @click="renderPage">Rerender</button>
-      <p>Total time: {{ renderTime.total }}ms, Time per page: {{ renderTime.perPage }}ms, Time per block: {{ renderTime.perBlock }}ms</p>
+      <p>
+        Total time: {{ renderTime.total }}ms, Time per page:
+        {{ renderTime.perPage }}ms, Time per block: {{ renderTime.perBlock }}ms
+      </p>
       <a href="https://github.com/rm1138/gdg-pdf-generator">Source Code</a>
     </div>
-    <div class="wrapper" :class="{show: ready.value || demoMode.value === 'yes'}">
+    <div
+      :class="{ show: ready.value || demoMode.value === 'yes' }"
+      class="wrapper"
+    >
       <page-component
-          :class="{ 'demo-mode': demoMode.value === 'yes' }"
-          :key="page"
-          :page="page"
-          ref="currentPage"
-          @image-loaded="imageLoaded"
-          v-for="(page) in pages"/>
+        v-for="page in pages"
+        :key="page"
+        ref="currentPage"
+        :class="{ 'demo-mode': demoMode.value === 'yes' }"
+        :page="page"
+        @image-loaded="imageLoaded"
+      />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import {defineComponent, onMounted, reactive, ref, watch} from 'vue'
+import { defineComponent, onMounted, reactive, ref, watch } from 'vue'
 import PageComponent from '@/components/Page.vue'
-import {LoremIpsum} from "lorem-ipsum"
+import { LoremIpsum } from 'lorem-ipsum'
 
 const short = new LoremIpsum({
   sentencesPerParagraph: {
     min: 1,
-    max: 1
+    max: 1,
   },
   wordsPerSentence: {
     min: 3,
-    max: 8
-  }
+    max: 8,
+  },
 })
 
 const long = new LoremIpsum({
   sentencesPerParagraph: {
     min: 5,
-    max: 10
+    max: 10,
   },
   wordsPerSentence: {
     min: 5,
-    max: 10
-  }
+    max: 10,
+  },
 })
 
-const genDummyTable: (row: number, col: number) => string[][] = (row: number, col: number) => {
-  return Array.from(Array(row).keys())
-    .map((_, idx) => {
-      return [(idx + 1).toString(), ...Array.from(Array(col).keys())
-        .map(() => short.generateWords(1))]
-    })
+const genDummyTable: (row: number, col: number) => string[][] = (
+  row: number,
+  col: number,
+) => {
+  return Array.from(Array(row).keys()).map((_, idx) => {
+    return [
+      (idx + 1).toString(),
+      ...Array.from(Array(col).keys()).map(() => short.generateWords(1)),
+    ]
+  })
 }
 
 const rawData: (blocksCount: number) => Data = (blocksCount) => {
   let lastType: 'h2' | 'image' | 'p' | 'table' | null = null
   return {
     blocks: Array.from(Array(blocksCount).keys())
-            .map(idx => idx + 1)
-            .map(idx => {
-              const random = Math.random()
-              if (idx === 1 || (lastType !== 'h2' && random > 0.7)) {
-                lastType = 'h2'
-                return {
-                  blockType: 'paragraph',
-                  content: `${idx}. ${short.generateSentences()}`,
-                  typography: 'h2',
-                } as DummyParagraph
-              } else if (lastType === 'p' && random > 0.6) {
-                const row = Math.floor(Math.random() * 10 + 50)
-                const col = Math.floor(Math.random() * 3 + 5)
-                lastType = 'table'
-                return {
-                  blockType: 'table',
-                  data: genDummyTable(row, col),
-                  titles: ['Row No', ...Array.from(Array(col).keys()).map(() => short.generateWords(1))],
-                  caption: `${idx}. ${short.generateSentences(1)}`,
-                } as DummyTable
-              } else if (lastType === 'p' && random > 0.5) {
-                const width = 300 // Math.floor(Math.random() * 200) + 300
-                const height = 200 // Math.floor(Math.random() * 100) + 100
+      .map((idx) => idx + 1)
+      .map((idx) => {
+        const random = Math.random()
+        if (idx === 1 || (lastType !== 'h2' && random > 0.7)) {
+          lastType = 'h2'
+          return {
+            blockType: 'paragraph',
+            content: `${idx}. ${short.generateSentences()}`,
+            typography: 'h2',
+          } as DummyParagraph
+        } else if (lastType === 'p' && random > 0.6) {
+          const row = Math.floor(Math.random() * 10 + 50)
+          const col = Math.floor(Math.random() * 3 + 5)
+          lastType = 'table'
+          return {
+            blockType: 'table',
+            data: genDummyTable(row, col),
+            titles: [
+              'Row No',
+              ...Array.from(Array(col).keys()).map(() =>
+                short.generateWords(1),
+              ),
+            ],
+            caption: `${idx}. ${short.generateSentences(1)}`,
+          } as DummyTable
+        } else if (lastType === 'p' && random > 0.5) {
+          const width = 300 // Math.floor(Math.random() * 200) + 300
+          const height = 200 // Math.floor(Math.random() * 100) + 100
 
-                lastType = 'image'
-                return {
-                  blockType: 'image',
-                  url: `https://picsum.photos/${width}/${height}?t=${Math.random()}`,
-                  caption: `${idx}. ${short.generateSentences(1)}`,
-                  width,
-                  height
-                } as DummyImage
-              } else {
-                lastType = 'p'
-                return {
-                  blockType: 'paragraph',
-                  content: `${idx}. ${long.generateParagraphs(1)}`,
-                  typography: 'p',
-                } as DummyParagraph
-              }
-            })
-            .map(it => it as Block)
+          lastType = 'image'
+          return {
+            blockType: 'image',
+            url: `https://picsum.photos/${width}/${height}?t=${Math.random()}`,
+            caption: `${idx}. ${short.generateSentences(1)}`,
+            width,
+            height,
+          } as DummyImage
+        } else {
+          lastType = 'p'
+          return {
+            blockType: 'paragraph',
+            content: `${idx}. ${long.generateParagraphs(1)}`,
+            typography: 'p',
+          } as DummyParagraph
+        }
+      })
+      .map((it) => it as Block),
   }
 }
 
-type PaperFormats = 'A3' | 'A4' | 'A5' | 'letter' | 'legel' |
-        'A3 landscape' | 'A4 landscape' | 'A5 landscape' | 'letter landscape' | 'legel landscape'
+type PaperFormats =
+  | 'A3'
+  | 'A4'
+  | 'A5'
+  | 'letter'
+  | 'legel'
+  | 'A3 landscape'
+  | 'A4 landscape'
+  | 'A5 landscape'
+  | 'letter landscape'
+  | 'legel landscape'
 
 export default defineComponent({
   setup() {
-    const blocksCount = reactive({value:50})
+    const blocksCount = reactive({ value: 50 })
     const data = reactive(rawData(blocksCount.value))
     const pages = reactive<PageData[]>([])
     const currentPage = ref<typeof PageComponent | null>(null)
-    const demoMode = reactive<{value: 'yes'|'no'}>({value: 'no'})
-    const paperFormats = reactive<{value: PaperFormats}>({value: 'A4'})
-    const renderTime = reactive({total: 0, perPage: 0, perBlock: 0})
-    const renderFlow = reactive<{value: 'linear'|'pre-calculate'}>({value: 'pre-calculate'})
-    const waitMode = reactive<{value: 'animation' | '0ms' | '500ms'}>({value: 'animation'})
-    const ready = reactive({value: false})
-    const loadedImageCount = reactive<Set<string>>( new Set())
-    const imageCount = reactive({value: -1})
+    const demoMode = reactive<{ value: 'yes' | 'no' }>({ value: 'no' })
+    const paperFormats = reactive<{ value: PaperFormats }>({ value: 'A4' })
+    const renderTime = reactive({ total: 0, perPage: 0, perBlock: 0 })
+    const renderFlow = reactive<{ value: 'linear' | 'pre-calculate' }>({
+      value: 'pre-calculate',
+    })
+    const waitMode = reactive<{ value: 'animation' | '0ms' | '500ms' }>({
+      value: 'animation',
+    })
+    const ready = reactive({ value: false })
+    const loadedImageCount = reactive<Set<string>>(new Set())
+    const imageCount = reactive({ value: -1 })
     let start = Date.now()
 
     watch(paperFormats, (newVal) => {
       document.body.className = newVal.value
     })
 
-    watch(blocksCount,(newValue) => {
+    watch(blocksCount, (newValue) => {
       data.blocks = rawData(newValue.value).blocks
       pages.length = 0
     })
@@ -164,17 +207,17 @@ export default defineComponent({
         title: 'GDG Hong Kong DevFest 2020 Demo',
         pageNo: pages.length + 1,
         totalPage: 0,
-        footerMsg: 'Dummy footer message.'
+        footerMsg: 'Dummy footer message.',
       })
     }
 
     const syncUI = async () => {
       if (waitMode.value === '500ms') {
-        return new Promise(resolve => setTimeout(resolve, 500))
+        return new Promise((resolve) => setTimeout(resolve, 500))
       } else if (waitMode.value === '0ms') {
-        return new Promise(resolve => setTimeout(resolve, 0))
+        return new Promise((resolve) => setTimeout(resolve, 0))
       } else if (waitMode.value === 'animation') {
-        return new Promise(resolve => requestAnimationFrame(resolve))
+        return new Promise((resolve) => requestAnimationFrame(resolve))
       }
     }
 
@@ -195,7 +238,9 @@ export default defineComponent({
       ready.value = false
       loadedImageCount.clear()
       start = Date.now()
-      imageCount.value = data.blocks.filter(it => it.blockType === 'image').length
+      imageCount.value = data.blocks.filter(
+        (it) => it.blockType === 'image',
+      ).length
       pages.length = 0
     }
 
@@ -246,7 +291,10 @@ export default defineComponent({
       do {
         const currentPage = pages[pages.length - 1]
         const currentBlock = blocksWithMeasurement.shift()!!
-        const currentBlockHeight = currentBlock.heightMap!!.reduce((acc, curr) => acc + curr, 0)
+        const currentBlockHeight = currentBlock.heightMap!!.reduce(
+          (acc, curr) => acc + curr,
+          0,
+        )
         currentPageUsedSpace += currentBlockHeight
         if (currentPageUsedSpace > pageAvailableSpace) {
           if (currentBlock.heightMap!!.length > 1) {
@@ -264,7 +312,10 @@ export default defineComponent({
                 currentPage.blocks.push({
                   ...currentBlock,
                   splited: true,
-                  data: (currentBlock as DummyTable).data.splice(0, rowToKeep - 1)
+                  data: (currentBlock as DummyTable).data.splice(
+                    0,
+                    rowToKeep - 1,
+                  ),
                 } as any)
                 currentBlock.heightMap!!.splice(1, rowToKeep - 1)
               }
@@ -273,7 +324,10 @@ export default defineComponent({
           }
           blocksWithMeasurement.unshift(currentBlock)
           const lastBlock = currentPage.blocks[currentPage.blocks.length - 1]
-          if (lastBlock.blockType === 'paragraph' && (lastBlock as DummyParagraph).typography !== 'p') {
+          if (
+            lastBlock.blockType === 'paragraph' &&
+            (lastBlock as DummyParagraph).typography !== 'p'
+          ) {
             blocksWithMeasurement.unshift(currentPage.blocks.pop()!!)
           }
           currentPageUsedSpace = 0
@@ -308,48 +362,52 @@ export default defineComponent({
       loadedImageCount,
       imageLoaded(src: string) {
         loadedImageCount.add(src)
-      }
+      },
     }
   },
-  components: {PageComponent}
+  components: { PageComponent },
 })
 </script>
 
 <style lang="scss">
-@import "~paper-css/paper.css";
-  // compensate the demo border
+@import '~paper-css/paper.css';
+// compensate the demo border
+.block {
+  border: 1px rgba(0, 0, 0, 0) dashed;
+}
+
+.demo-mode {
   .block {
-    border: 1px rgba(0, 0, 0, 0) dashed;
+    border: 1px #555555 dashed;
   }
-  .demo-mode {
-    .block {
-      border: 1px #555555 dashed;
-    }
-  }
+}
+
+.tool-bar {
+  margin: 20px;
+}
+
+@media print {
   .tool-bar {
-    margin: 20px;
+    display: none;
   }
-  @media print {
-    .tool-bar {
-      display: none;
-    }
+}
+
+@media screen {
+  .wrapper.show {
+    visibility: visible;
+    height: auto;
   }
-  @media screen {
-    .wrapper.show {
-      visibility: visible;
-      height: auto;
-    }
-    .wrapper {
-      height: 0;
-      overflow-y: hidden;
-      visibility: hidden;
-      text-align: center;
-    }
-    .sheet {
-      display: inline-block;
-      margin: 5mm;
-      text-align: left;
-      content-visibility: auto;
-    }
+  .wrapper {
+    height: 0;
+    overflow-y: hidden;
+    visibility: hidden;
+    text-align: center;
   }
+  .sheet {
+    display: inline-block;
+    margin: 5mm;
+    text-align: left;
+    content-visibility: auto;
+  }
+}
 </style>

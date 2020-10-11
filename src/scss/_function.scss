@@ -1,5 +1,5 @@
 @function convert($px) {
-  @return ($px / 2480.0) * 210.0;
+  @return ($px / 2480) * 210;
 }
 
 @function pxToMm($px) {
