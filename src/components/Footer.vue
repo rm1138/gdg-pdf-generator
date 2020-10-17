@@ -1,10 +1,10 @@
 <template>
   <div class="footer block">
-    <!--    <div class="page-no">Page {{ pageNo }} of {{ totalPage }}</div>-->
+    <div class="page-no">Page {{ pageNo }} of {{ totalPage }}</div>
     <p>{{ footerMsg }}</p>
-    <!--    <div class="the-10mm-box">-->
-    <!--      <span>This box is <span class="bold">exactly</span> 100mm x 20mm</span>-->
-    <!--    </div>-->
+    <div class="the-10mm-box">
+      <span>This box is <span class="bold">exactly</span> 100mm x 20mm</span>
+    </div>
   </div>
 </template>
 
