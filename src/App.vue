@@ -71,6 +71,19 @@
 import { defineComponent, onMounted, reactive, ref, watch } from 'vue'
 import PageComponent from '@/components/Page.vue'
 import { LoremIpsum } from 'lorem-ipsum'
+import { IPrng } from 'lorem-ipsum/types/src/lib/generator'
+
+let seed = 2
+
+const seededRandom: IPrng = () => {
+  const max = 1
+  const min = 0
+
+  seed = (seed * 9301 + 49297) % 233280
+  const rnd = seed / 233280
+
+  return min + rnd * (max - min)
+}
 
 const short = new LoremIpsum({
   sentencesPerParagraph: {
@@ -81,6 +94,7 @@ const short = new LoremIpsum({
     min: 3,
     max: 8,
   },
+  random: seededRandom,
 })
 
 const long = new LoremIpsum({
@@ -92,6 +106,7 @@ const long = new LoremIpsum({
     min: 5,
     max: 10,
   },
+  random: seededRandom,
 })
 
 const genDummyTable: (row: number, col: number) => string[][] = (
@@ -112,17 +127,17 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
     blocks: Array.from(Array(blocksCount).keys())
       .map((idx) => idx + 1)
       .map((idx) => {
-        const random = Math.random()
+        const random = seededRandom()
         if (idx === 1 || (lastType !== 'h2' && random > 0.7)) {
           lastType = 'h2'
           return {
             blockType: 'paragraph',
-            content: `${idx}. ${short.generateSentences()}`,
+            content: `${short.generateSentences()}`,
             typography: 'h2',
           } as DummyParagraph
         } else if (lastType === 'p' && random > 0.6) {
-          const row = Math.floor(Math.random() * 10 + 50)
-          const col = Math.floor(Math.random() * 3 + 5)
+          const row = Math.floor(seededRandom() * 10 + 50)
+          const col = Math.floor(seededRandom() * 3 + 5)
           lastType = 'table'
           return {
             blockType: 'table',
@@ -142,8 +157,8 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
           lastType = 'image'
           return {
             blockType: 'image',
-            url: `https://picsum.photos/${width}/${height}?t=${Math.random()}`,
-            caption: `${idx}. ${short.generateSentences(1)}`,
+            url: `https://picsum.photos/seed/${seededRandom()}/${width}/${height}`,
+            caption: `${short.generateSentences(1)}`,
             width,
             height,
           } as DummyImage
@@ -151,7 +166,7 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
           lastType = 'p'
           return {
             blockType: 'paragraph',
-            content: `${idx}. ${long.generateParagraphs(1)}`,
+            content: `${long.generateParagraphs(1)}`,
             typography: 'p',
           } as DummyParagraph
         }
@@ -324,6 +339,7 @@ export default defineComponent({
           }
           blocksWithMeasurement.unshift(currentBlock)
           const lastBlock = currentPage.blocks[currentPage.blocks.length - 1]
+          // prevent header at the end of the page
           if (
             lastBlock.blockType === 'paragraph' &&
             (lastBlock as DummyParagraph).typography !== 'p'
