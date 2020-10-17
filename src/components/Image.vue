@@ -4,7 +4,7 @@
       :src="image.url"
       :style="{ height: image.height + 'px', width: image.width + 'px' }"
       alt=""
-      @load.once="$emit('image-loaded', image.src)"
+      @load.once="$emit('image-loaded', image.url)"
     />
     <p v-if="image.caption" class="caption">{{ image.caption }}</p>
   </div>
