@@ -73,7 +73,7 @@ import PageComponent from '@/components/Page.vue'
 import { LoremIpsum } from 'lorem-ipsum'
 import { IPrng } from 'lorem-ipsum/types/src/lib/generator'
 
-let seed = 500
+let seed = 2
 
 const seededRandom: IPrng = () => {
   const max = 1
@@ -135,9 +135,9 @@ const rawData: (blocksCount: number) => Data = (blocksCount) => {
             content: `${short.generateSentences()}`,
             typography: 'h2',
           } as DummyParagraph
-        } else if (lastType === 'p' && random > 1) {
-          const row = Math.floor(Math.random() * 10 + 50)
-          const col = Math.floor(Math.random() * 3 + 5)
+        } else if (lastType === 'p' && random > 0.6) {
+          const row = Math.floor(seededRandom() * 10 + 50)
+          const col = Math.floor(seededRandom() * 3 + 5)
           lastType = 'table'
           return {
             blockType: 'table',
@@ -339,6 +339,7 @@ export default defineComponent({
           }
           blocksWithMeasurement.unshift(currentBlock)
           const lastBlock = currentPage.blocks[currentPage.blocks.length - 1]
+          // prevent header at the end of the page
           if (
             lastBlock.blockType === 'paragraph' &&
             (lastBlock as DummyParagraph).typography !== 'p'
