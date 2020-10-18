@@ -387,6 +387,11 @@ export default defineComponent({
 
 <style lang="scss">
 @import '~paper-css/paper.css';
+
+html {
+  -webkit-text-size-adjust: none;
+}
+
 // compensate the demo border
 .block {
   border: 1px rgba(0, 0, 0, 0) dashed;
